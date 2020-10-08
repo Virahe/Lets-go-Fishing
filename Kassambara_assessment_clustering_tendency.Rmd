@@ -1,0 +1,189 @@
+---
+title: "Kassambara_assessment_clustering"
+author: "Virginia_Ahedo"
+date: "6/10/2020"
+output: rmarkdown::github_document
+---
+
+```{r setup, include=FALSE}
+cat("\f")
+rm(list=ls(all=TRUE))
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Set working paths
+```{r}
+setwd("D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing")
+dataPath <- "D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing"
+```
+
+### Load required libraries
+```{r}
+require(factoextra)
+require(clustertend)
+require(FactoMineR)
+```
+
+### Load "Final_Clustering_db.Rda": Clustering database without "society_name" & "society_id"
+```{r}
+load("Final_Clustering_db.Rda")
+```
+
+#### Check structure of "Final_Clustering_db.Rda"
+```{r}
+str(final_clust_db)
+```
+#### Check dimensions of "Final_Clustering_db.Rda"
+```{r}
+dim(final_clust_db)
+```
+
+## Assessing clustering tendency (Kassambara - Chapter 11)
+### The assessment of clustering tendency and clustering analysis will be conducted on variables EA001 to EA005, thus, we drop column 6: Agriculture_intensity
+
+#### Creation of a random dataframe to check against it
+```{r}
+random_df <- apply(final_clust_db[,-6], 2, 
+                  function(x){runif(length(x), min(x), (max(x)))})
+random_df <- as.data.frame(random_df)
+```
+
+#### Standardize both the original dataset and the random dataset
+```{r}
+final_clust_db_scaled = scale(final_clust_db[,-6])
+random_df_scaled = scale(random_df)
+```
+
+### Visual inspection of the data
+#### Plot faithful data set
+```{r}
+fviz_pca_ind(prcomp(final_clust_db_scaled), title = "PCA - Subsistence data",
+             palette = "jco", geom = "point", ggtheme = theme_classic(),
+             legend = "bottom")
+```
+
+#### Plot the random df 
+```{r}
+fviz_pca_ind(prcomp(random_df), title = "PCA - Random data", geom = "point", ggtheme = theme_classic())
+```
+
+### PCA with FactoMineR
+#### We will explore with PCA just variables from EA001 to EA005
+```{r}
+res_no_6 <- PCA(final_clust_db_scaled, ncp = Inf, graph = T)
+```
+#### Graph of the variables on the 1 and 2 dimensions
+```{r}
+plot(res_no_6, choix = "var", title = "PCA graph of variables 1st & 2nd dims.", axes = 1:2)
+```
+
+#### Graph of the variables on the 3 and 4 dimensions
+```{r}
+plot(res_no_6, choix = "var", title = "PCA graph of variables 3rd & 4th dims.", axes = 3:4)
+```
+
+#### Summary of the PCA analysis without the supplementary variable EA028
+```{r}
+summary(res_no_6)
+```
+#### Description of the PCA dimensions
+```{r}
+dimdesc(res_no_6, axes = 1:4)
+# Dimension 1 is highly correlated POSITIVELY to Hunting (0.80) and Gathering(0.77) and 
+# NEGATIVELY to Agriculture (-0.85) and Husbandry (-0.59)
+# Dimension 2 is highly POSITIVELY correlated to Husbandry (0.57) and NEGATIVELY to Fishing (-0.67)
+```
+### In case we are interested in exploring how the different categories of agriculture intensity (variable EA028) correlate with our PCA dimensions, we can drop all societies with NAs for variable EA028 and conduct the PCA analysis on the resulting subset of 1188 societies. 
+```{r}
+EA028_NAs = is.na(final_clust_db$Agriculture_intensity)
+clust_db_with_6 = final_clust_db[!EA028_NAs,]
+```
+
+#### Check dimensions of clust_db_with_6
+```{r}
+dim(clust_db_with_6)
+```
+
+#### PCA Analysis over clust_db_with_6
+```{r}
+res_with_6 <- PCA(clust_db_with_6, scale.unit = T, ncp = Inf, quali.sup = 6, graph = T)
+```
+
+#### Summary of the PCA analysis with the supplementary variable EA028 (1188 societies)
+```{r}
+summary(res_with_6)
+```
+
+#### The supplementary variable is significant, abs(vtest) >= 1.96 in the first two dims across most of its factors
+```{r}
+#abs(v_test) for Supplementary categories >= 1.96 --> Significantly different to 0
+#as v_test follows a Gaussian distribution
+```
+
+#### Description of the PCA dimensions
+```{r}
+dimdesc(res_with_6)
+#We can characterize axes using qualitative variables
+# Dimension 1 is highly correlated POSITIVELY to Hunting (0.80) and Gathering(0.77) and 
+# NEGATIVELY to Agriculture (-0.85) and Husbandry (-0.60)
+# Dimension 2 is highly POSITIVELY correlated to Husbandry (0.54) and NEGATIVELY to Fishing (-0.68)
+# The Supplementary variable correlates with the first PCA dimension with a R^2 of 0.70
+```
+#### PCA Plots over res_with_6 (considering the Supplementary Variable)
+```{r}
+# Drawing the supplementary variable: intensity_of_agriculture
+plot.PCA(res_with_6, cex = 0.8, choix = c("ind"), invisible = "ind")
+```
+#### Drawing the individuals according to agriculture_intensity
+```{r}
+plot(res_with_6, cex=0.8, habillage = 6, shadow = TRUE, label = "quali")
+```
+#### Plot of the individuals and variables in the 3 and 4 dimensions
+```{r}
+plot(res_with_6, choix = "ind", cex=0.8, habillage = 6, title = "Individuals 3 & 4 dim",
+     axes = 3:4)
+```
+
+## METHODS FOR ASSESSING CLUSTERING TENDENCY
+
+#### As previously stated, the assessment of clustering tendency and the clustering analysis will be conducted on the database including just variables from EA001 to EA005 (1290 x 5).
+#### Such database has already been created and scaled: final_clust_db_scaled
+#### The EA028 variable: Agriculture Intensity, was only considered for the PCA analyses and plots, and will not be considered anymore in the subsequent analyses.
+
+### 1. Statistical method: Hopkins statistic.
+```{r}
+#Hopkins statistic tests the spatial randomness of the data.
+#Hopkins measures the probability that a given data set is generated by a uniform data distribution.
+#If the value of Hopkins statistic is close to zero, then we can reject the null hypothesis and conclude that the data set D is significantly clusterable.
+```
+
+#### Compute Hopkins statistic for the dataset with the real data
+```{r}
+set.seed(27)
+hopkins(final_clust_db_scaled, n = nrow(final_clust_db_scaled)-1)
+```
+
+#### Compute Hopkins statistic for the random dataset
+```{r}
+set.seed(27)
+hopkins(random_df_scaled, n = nrow(random_df_scaled)-1)
+```
+
+#### It can be seen that the subsistence dataset is highly clusterable (H value = 0.1527 which is far below the threshold = 0.5). 
+#### However, the random_df is not clusterable (H = 0.5)
+
+### 2. Visual Assessment of Clustering Tendency (VAT)
+#### Dissimilarity matrices
+##### Subsistence data: final_clust_db_scaled
+```{r}
+fviz_dist(dist(final_clust_db_scaled), show_labels = F) + labs(title = "ODI subistence dataset")
+```
+
+##### Random data: random_df_scaled
+```{r}
+fviz_dist(dist(random_df_scaled), show_labels = F) + labs(title = "ODI random dataset")
+```
+
+```{r}
+##Note that: Red: high similarity (low dissimilarity), Blue: low similarity
+```
