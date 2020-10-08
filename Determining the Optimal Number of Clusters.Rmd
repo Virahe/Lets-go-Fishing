@@ -1,0 +1,150 @@
+---
+title: "Determining the Optimal Number of Clusters"
+author: "Virginia_Ahedo"
+date: "7/10/2020"
+output: rmarkdown::github_document
+---
+
+```{r setup, include=FALSE}
+cat("\f")
+rm(list=ls(all=TRUE))
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Set working paths
+```{r}
+setwd("D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing")
+dataPath <- "D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing"
+```
+
+### Load required libraries
+```{r}
+require(factoextra)
+require(clustertend)
+require(NbClust)
+```
+
+### Load "Final_Clustering_db.Rda": Clustering database without "society_name" & "society_id"
+```{r}
+load("Final_Clustering_db.Rda")
+```
+
+#### Check structure of "Final_Clustering_db.Rda"
+```{r}
+str(final_clust_db)
+```
+
+#### Clustering analysis will be conducted on variables EA001 to EA005, thus, we drop column 6: Agriculture intensity.
+
+#### Standardize the subsistence dataset.
+```{r}
+final_clust_db_scaled = scale(final_clust_db[,-6])
+```
+
+#### Check structure of final_clust_db_scaled
+```{r}
+str(final_clust_db_scaled)
+```
+
+### Determining the Optimal Number of Clusters
+#### Direct methods
+##### 1. Elbow method
+```{r}
+# Elbow method: minimizes the total intra-cluster variation -within-cluster sum of square (WSS)-. WSS measures the compactness of the clustering and we want it to be as small as possible.
+# One should choose a number of clusters so that adding another cluster doesn't improve much better the total WSS.
+
+# Function Parameters:
+# - x: the standardized data.
+# - FUNcluster: hcut: hierarchical clustering
+# - method: "wss" (total within sum of squares)
+
+fviz_nbclust(final_clust_db_scaled, hcut, method = "wss") + labs(subtitle = "Elbow method")
+
+# The location of the bend (knee) in the plot is generally considered as an indicator of the appropriate number of clusters --> K = 2 
+```
+#### 2. Average silhouette method
+```{r}
+# Average silhouette method
+# It measures the quality of a clustering, i.e., determines how well each object lies within its cluster. A high average silhouette width indicates a good clustering. The optimal number of clusters k is the one that maximizes the average silhouette over a range of possible values of k
+
+# Function parameters: 
+# FUNcluster = hcut (hierarchical clustering)
+
+fviz_nbclust(final_clust_db_scaled, hcut, method = "silhouette") + labs(subtitle = "Silhouette method")
+#The location of the maximum is considered as the appropriate number of clusters
+```
+
+#### 3. Gap statistic
+```{r}
+# Gap statistic (Hastie & Tibshirani)
+# The gap statistic compares the total within intra-cluster variation for different values of k with their expected values under null reference distribution of the data.
+# The estimate of the optimal nb of clusters will be the value that maximizes the gap statistic, which means that the cluster structure is far away from the random uniform distribution.
+
+# Note that, using B = 500 gives quite precise results, so that the gap plot is basically unchanged after another run -> nboot = 500 is the recommended value for analysis.
+
+# Function parameters:
+# - FUNcluster = hcut (hierarchical clustering)
+# - nboot = 500 -> number of Montecarlo bootstrap samples. Used only for determining the number of clusters using gap.
+
+set.seed(123)
+fviz_nbclust(final_clust_db_scaled, FUNcluster = hcut, nstart = 2, method = "gap_stat", nboot = 500) + labs(subtitle = "Nb of clusters - Gap statistic method")
+```
+
+```{r}
+# The disadvantage of elbow and average silhouette methods is that, they measure a global clustering characteristic only. A more sophisticated method is to use the gap statistic which provides a statistical procedure to formalize the elbow/silhouette heuristic in order to estimate the optimal number of clusters.
+
+```
+
+#### Nb_clust: 30 indices for choosing the best number of clusters
+```{r}
+#Function NbClust
+# -distance: the distance measure to be used to compute the dissimilarity matrix --> "euclidean"
+# -min.nc: minimum number of clusters: 2
+# -max.nc: maximum number of clusters: 15
+# -method: "ward.D2"
+# Two different algorithms are found in the literature for Ward clustering. The one used by option "ward.D" (equivalent to the only Ward option "ward" in R versions <= 3.0.3) does not implement Ward's (1963) clustering criterion, whereas option "ward.D2" implements that criterion (Murtagh and Legendre 2014). With the latter, the dissimilarities are squared before cluster updating. Note that agnes(, method="ward") corresponds to hclust(, "ward.D2").
+
+# nb <- NbClust(final_clust_db_scaled, distance = "euclidean", min.nc = 2, max.nc = 15, method = "ward.D2")
+# fviz_nbclust(nb)
+```
+```{r}
+# NbClust returns the following error:
+# Error in NbClust(final_clust_db_scaled, distance = "euclidean", min.nc = 2, : The TSS matrix is indefinite. There must be too many missing values. The index cannot be calculated.
+```
+
+##### Check how many rows are in fact different
+```{r}
+dim(unique(final_clust_db_scaled))
+```
+```{r}
+# The high number of identical rows is probably the reason why our matrix is indefinite. 
+# To make up for this problem we are going to add some random noise to all entries in the original matrix
+```
+
+##### First we are going to create the final_subsistence_db by dropping col 6 (EA028)
+```{r}
+final_subsistence_db = final_clust_db[,-6]
+```
+
+##### Add random noise to final_subsistence_db
+```{r}
+rand_noise_matrix = matrix(runif(1290*5)/100000,ncol = 5)
+noised_subsistence_db = final_subsistence_db + rand_noise_matrix
+```
+
+##### Standardize the noised_subsistence_db
+```{r}
+noised_subsistence_db_scaled = scale(noised_subsistence_db)
+```
+
+##### Call NbClust
+```{r}
+nb <- NbClust(noised_subsistence_db_scaled, distance = "euclidean", min.nc = 2, max.nc = 15, method = "ward.D2")
+fviz_nbclust(nb)
+```
+
+#### Save the final_subsistence_db: without col 6 (EA028 - Agriculture Intensity) and with no "society_name" or "society_id" so that it has no impact on the clustering process
+```{r}
+save(final_subsistence_db, file = "final_subsistence_db.Rda")
+```
+
