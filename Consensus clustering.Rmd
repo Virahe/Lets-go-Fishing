@@ -1,0 +1,164 @@
+---
+title: "Consensus clustering"
+author: "Virginia_Ahedo"
+date: "8/10/2020"
+output: rmarkdown::github_document
+---
+### Setup
+### Clean workspace
+```{r setup, include=FALSE}
+cat("\f")
+rm(list=ls(all=TRUE))
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Set working paths
+```{r}
+setwd("D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing")
+dataPath <- "D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing"
+```
+
+### Load required libraries
+```{r}
+require(doParallel)
+require(ConsensusClusterPlus)
+require(dplyr)
+```
+
+### Configure parallel execution: 6 cores
+```{r}
+cl <- makeCluster(6)
+registerDoParallel(cl)
+```
+
+### Loading input data. We are going to work with "Id_Clustering_db.Rda" since in ConsensusClusterPlus both rows and cols of the input matrix need to be named. Therefore, we will name our rows with the contents of "society_id"
+```{r}
+load("Id_Clustering_db.Rda")
+```
+
+#### Check the structure of "Id_Clustering_db.Rda"
+```{r}
+str(id_clust_db)
+```
+#### Clustering Analysis will be conducted on variables EA001 to EA005, thus, we drop column 7: Agriculture_intensity
+#### In addition, we are going to drop "society_id" col, having previously saved its contents in a variable
+```{r}
+society_ids = id_clust_db$society_id
+id_clust_db = select(id_clust_db, -c("society_id", "Agriculture_intensity"))
+str(id_clust_db)
+dim(id_clust_db)
+```
+
+### ConsensusClusterPlus input requirements:
+#### - d: data matrix where columns=items/samples and rows are features
+#### - After exploring the input matrix in the Tutorial, it appears that both rows and cols need to be named. We name here our rows with the contents of society_ids
+```{r}
+## Transform the id_clust_db dataframe into a matrix
+final_clust_matrix = as.matrix(id_clust_db)
+
+## Set society_ids as column names
+rownames(final_clust_matrix) <- society_ids
+str(final_clust_matrix)
+```
+
+#### Standardize elements in final_clust_matrix (substract the mean and divide by sd)
+#### Such data transformation technique is widely used in clustering analysis.
+##### The scale function, by default, centers and/or scales the COLUMNS of a numeric matrix. We want to scale EA001 to EA005, thus we scale prior to creating the transpose matrix.
+```{r}
+final_clust_matrix_norm = scale(final_clust_matrix)
+str(final_clust_matrix_norm)
+```
+
+##### Drop attributes "scaled:center", "scaled:scale"
+```{r}
+attr(final_clust_matrix_norm,"scaled:center")<-NULL
+attr(final_clust_matrix_norm,"scaled:scale")<-NULL
+str(final_clust_matrix_norm)
+```
+#### To meet the input format requirements from ConsensusClusterPlus, we need to transpose our final_clust_matrix_norm
+```{r}
+## So as to have the items as columns, we need to transpose final_clust_matrix
+t_final_clust_matrix_norm = t(final_clust_matrix_norm)
+str(t_final_clust_matrix_norm)
+dim(t_final_clust_matrix_norm)
+```
+
+### ConsensusClusterPlus function
+```{r}
+# Arguments:
+# - d = data to be clustered. Data matrix where columns=items/samples and rows are features
+# - maxK = integer value. Maximum cluster number to evaluate. In our case: 20.
+#   The ConsensusClusterPlus Tutorial states: recommended cluster count: 20
+# - reps = integer value. Number of subsamples. We set = 1000 as it is suggested in the Tutorial.
+#   In his paper: Monti set reps to 500.
+# - pItem = numerical value. Proportion of items to sample. We set pItem = 0.80 as Monti did.
+# - pFeature = numerical value. Proportion of features to sample. We set pFeature = 1. (All features)
+# - clusterAlg = character value. cluster algorithm. 'hc' hierarchical clustering (hclust).
+# - title = character value for the output directory. 
+# - innerLinkage = This option specifies the linkage method to use in iterative agglomerative hierarchical clustering. Not applicable to other clustering algorithms. We chose "ward.D2"
+# - finalLinkage = This option specifies the linkage method to use in the final agglomerative hierarchical clustering. We chose "ward.D2".
+# - distance = character value. 'pearson' (1 - Pearson correlation), 'spearman', 'euclidean', 'binary',...
+#   In coherence with our previous analysis, we set distance = 'euclidean'
+# - seed = optional numerical value. Sets random seed for reproducible results.
+# - plot = NULL (print to screen), 'pdf', 'png'
+# - writeTable = logical value. TRUE - write output and log to csv.
+# - verbose = boolean. If TRUE, print messages to the screen to indicate progress.
+
+title = "HC Euclidean Consensus Clustering"
+
+rcc_Euclidean = ConsensusClusterPlus(d = t_final_clust_matrix_norm, maxK = 20, reps = 1000,
+                                     pItem = 0.8, pFeature = 1, clusterAlg = 'hc',
+                                     innerLinkage = "ward.D2", finalLinkage = "ward.D2",
+                                     title = title, distance = 'euclidean', seed = 1, 
+                                     plot = 'pdf', writeTable = T, verbose = F)
+```
+
+### Consensus Cluster and Consensus Item
+```{r}
+icl = calcICL(rcc_Euclidean, title = title, plot = "pdf", writeTable = T)
+
+```
+
+#### Check icl structure
+```{r}
+str(icl)
+```
+
+```{r}
+str(icl$clusterConsensus)
+```
+
+#### Obtention of the mean value of cluster consensus for each K in Kmin:Kmax
+##### Transform icl$clusterConsensus to dataframe
+```{r}
+clusterCons_data = as.data.frame(icl$clusterConsensus)
+```
+
+##### Attach so as to be able to call cols by name
+```{r}
+attach(clusterCons_data)
+```
+
+##### Variable definition
+```{r}
+Kmax = 20
+consensus_mean <- data.frame(matrix(ncol = 2, nrow = (Kmax -1)))
+names(consensus_mean) <- c("K", "Mean_cluster_consensus")
+
+for (i in 1:(Kmax-1)){
+  nb_clusters = i + 1
+  consensus_mean[i,] <- c(nb_clusters, mean(clusterCons_data[clusterCons_data$k == nb_clusters,
+                                                             "clusterConsensus"]))
+}
+```
+
+##### Order consensus_mean
+```{r}
+consensus_mean[order(consensus_mean$Mean_cluster_consensus, decreasing = T),]
+```
+#### Save the results obtained
+```{r}
+save(rcc_Euclidean, file = "rcc_Euclidean_FINAL.Rda")
+save(icl, file = "cluster_item_consensus.Rda")
+save(consensus_mean, file = "consensusMean.Rda")
+```
