@@ -1,0 +1,350 @@
+---
+title: "Hierarchical clustering different cuts"
+author: "Virginia_Ahedo"
+date: "10/10/2020"
+output: rmarkdown::github_document
+---
+
+### Setup
+### Clean workspace
+```{r setup, include=FALSE}
+cat("\f")
+rm(list=ls(all=TRUE))
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Set working paths
+```{r}
+setwd("D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing")
+dataPath <- "D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing"
+```
+
+### Load required libraries
+```{r}
+require(factoextra)
+require(dplyr)
+require(xlsx)
+```
+
+#### We are going to work with "Named_Clustering_db.Rda" (1290 societies), which includes "society_id", "society_name", variables from EA001 to EA005 and EA028.
+
+#### Load "Named_Clustering_db.Rda": named_clust_db
+```{r}
+load("Named_Clustering_db.Rda")
+```
+
+#### Check structure of "Named_Clustering_db.Rda"
+```{r}
+str(named_clust_db)
+```
+
+### Create the hc_db_final, which is the database on which we will conduct clustering analysis (vars EA001 to EA005 for 1290 societies). To do so, we will preprocess the named_clust_db:
+#### Save "society_id" in a variable.
+#### Drop: "society_id", "society_name" and "Agriculture_intensity" 
+```{r}
+society_ids = named_clust_db$society_id
+hc_db_final = select(named_clust_db, -c("society_id", "society_name", "Agriculture_intensity"))
+str(hc_db_final)
+```
+
+#### Prior to conducting hierarchical clustering we need to standardize by column the hc_db_final dataset
+```{r}
+hc_db_final_scaled = scale(hc_db_final)
+str(hc_db_final_scaled)
+```
+## HIERACHICAL CLUSTERING
+### Nb clusters = 2: Hunter-gatherers vs agriculturalists
+```{r}
+# Function eclust arguments:
+# - FUNcluster = "hclust"
+# - k = 2
+# - k.max = the maximum number of clusters to consider (not given)
+# - graph = TRUE --> Cluster plot is displayed --> NOT WORKING
+# - hc_metric = "euclidean"
+# - hc_method: the agglomerative method to be used by hclust: "ward.D2"
+# - seed = 1 --> integer used for seeding the random number generator.
+
+# With regard to hc_method: Two different algorithms are found in the literature for Ward clustering. The one used by option "ward.D" (equivalent to the only Ward option "ward" in R versions <= 3.0.3) does not implement Ward's (1963) clustering criterion, whereas option "ward.D2" implements that criterion (Murtagh and Legendre 2014). With the latter, the dissimilarities are squared before cluster updating. Note that agnes(, method="ward") corresponds to hclust(, "ward.D2").
+
+hc2.res <- eclust(hc_db_final_scaled, "hclust", k = 2, hc_metric = "euclidean", 
+                  hc_method = "ward.D2", seed = 1)
+```
+
+#### Visualize dendrogram coloured for k = 2
+```{r}
+fviz_dend(hc2.res, show_labels = F, palette = "Paired", as.ggplot = T)
+```
+
+### Nb clusters = 7
+```{r}
+hc7.res <- eclust(hc_db_final_scaled, "hclust", k = 7, hc_metric = "euclidean", 
+                  hc_method = "ward.D2", seed = 1)
+```
+
+#### Visualize dendrogram coloured for k = 7
+```{r}
+fviz_dend(hc7.res, show_labels = F, palette = "jco", as.ggplot = T)
+```
+### Nb clusters = 15
+```{r}
+hc15.res <- eclust(hc_db_final_scaled, "hclust", k = 15, hc_metric = "euclidean", 
+                  hc_method = "ward.D2", seed = 1)
+```
+
+#### Visualize dendrogram coloured for k = 15
+```{r}
+fviz_dend(hc15.res, show_labels = F, palette = "jco", as.ggplot = T)
+```
+
+### Create interpretation dataset with extra variables which have not been used in the clustering analysis but that will serve as interpretation aids.
+#### Extra variables to include in the interpretation dataset:
+##### 1. EA029: Major crop type.
+##### 2. EA030: Settlement patterns.
+##### 3. EA031: Mean size of local communities.
+##### 4. EA039: Domestic animals - Plow cultivation.
+##### 5. EA040: Domestic animals - Type.
+##### 6. EA041: Domestic animals - Milking.
+##### 7. EA202: Population size.
+```{r}
+#EA029: Major crop type
+EA029 = read.csv("EA029.csv", header = T, sep = ",", fileEncoding = "UTF-8")
+
+#EA030: Settlement patterns
+EA030 = read.csv("EA030.csv", header = T, sep = ",", fileEncoding = "UTF-8")
+
+#EA031: Mean size of local communities
+EA031 = read.csv("EA031.csv", header = T, sep = ",", fileEncoding = "UTF-8")
+
+#EA039: Domestic animals - Plow cultivation
+EA039 = read.csv("EA039.csv", header = T, sep = ",", fileEncoding = "UTF-8")
+
+#EA040: Domestic animals - Type
+EA040 = read.csv("EA040.csv", header = T, sep = ",", fileEncoding = "UTF-8")
+
+#EA041: Domestic animals - Milking
+EA041 = read.csv("EA041.csv", header = T, sep = ",", fileEncoding = "UTF-8")
+
+#EA202: Population size
+EA202 = read.csv("EA202.csv", header = T, sep = ",", fileEncoding = "UTF-8")
+```
+
+##### Drop unnecessary columns before building the interpretation_db
+##### The interpretation_db will be joined with named_clust_db by "society_id"
+##### Rename code_label column
+```{r}
+cols2drop = c("society_name", "society_xd_id", "language_glottocode", "language_name",
+              "language_family","variable_id", "code", "focal_year", "sub_case", "comment")
+
+EA029_s <- select(EA029, -all_of(cols2drop))
+names(EA029_s)[names(EA029_s) == "code_label"] <- "major_crop_type"
+
+EA030_s <- select(EA030, -all_of(cols2drop))
+names(EA030_s)[names(EA030_s) == "code_label"] <- "settlement_patterns"
+
+EA031_s <- select(EA031, -all_of(cols2drop))
+names(EA031_s)[names(EA031_s) == "code_label"] <- "mean_size_communities"
+
+EA039_s <- select(EA039, -all_of(cols2drop))
+names(EA039_s)[names(EA039_s) == "code_label"] <- "plow"
+
+EA040_s <- select(EA040, -all_of(cols2drop))
+names(EA040_s)[names(EA040_s) == "code_label"] <- "domestic_animals"
+
+EA041_s <- select(EA041, -all_of(cols2drop))
+names(EA041_s)[names(EA041_s) == "code_label"] <- "milking"
+
+EA202_s <- select(EA202, -all_of(cols2drop))
+names(EA202_s)[names(EA202_s) == "code_label"] <- "population_size"
+```
+
+##### Check dimensions
+```{r}
+cat("\nDimensions of dataset EA029_s: ", dim(EA029_s))
+cat("\nDimensions of dataset EA030_s: ", dim(EA030_s))
+cat("\nDimensions of dataset EA031_s: ", dim(EA031_s))
+cat("\nDimensions of dataset EA039_S: ", dim(EA039_s))
+cat("\nDimensions of dataset EA040_s: ", dim(EA040_s))
+cat("\nDimensions of dataset EA041_s: ", dim(EA041_s))
+cat("\nDimensions of dataset EA202_s: ", dim(EA202_s))
+```
+
+#### Build interpretation database
+##### Left join of named_clust_db and all interpretation variables.
+##### Include attribute all = T, so that it does not drop registers with NAs
+```{r}
+interpretation_01 = merge(named_clust_db, EA029_s, by.x="society_id", all = T)
+interpretation_02 = merge(interpretation_01, EA030_s, by.x="society_id", all = T)
+interpretation_03 = merge(interpretation_02, EA031_s, by.x="society_id", all = T)
+interpretation_04 = merge(interpretation_03, EA039_s, by.x="society_id", all = T)
+interpretation_05 = merge(interpretation_04, EA040_s, by.x="society_id", all = T)
+interpretation_06 = merge(interpretation_05, EA041_s, by.x="society_id", all = T)
+interpretation_07 = merge(interpretation_06, EA202_s, by.x="society_id", all = T)
+
+str(interpretation_07)
+```
+```{r}
+dim(interpretation_06)
+```
+```{r}
+dim(interpretation_07)
+```
+##### Check why from interpretation_06 to interpretation_07 we have an extra society
+```{r}
+which(interpretation_07$society_id %in% interpretation_06$society_id == FALSE)
+```
+##### Which society is it?
+```{r}
+interpretation_07[1125,]
+```
+
+##### Create interpretation_final by dropping row 1125
+```{r}
+interpretation_final = interpretation_07[-1125,]
+str(interpretation_final)
+```
+
+### CREATION OF THE INTERPRETATION FILES
+#### Create dataframes with the "society_id" and the cluster assignments of observations for the different cuts at k = 2, 7 and 15.
+
+#### Nb clusters = 2 -> hc_2
+```{r}
+hc_2 = data.frame(society_ids, hc2.res$cluster)
+colnames(hc_2) = c("society_id", "hc2.cluster")
+hc_2
+```
+##### Create hc2_interpretation: Merge hc_2 with interpretation_final
+```{r}
+hc2_interpretation = merge(interpretation_final, hc_2, by.x = "society_id")
+```
+
+##### Separate the 2 clusters for interpretation
+```{r}
+hc2_interp_1 = hc2_interpretation[hc2_interpretation$hc2.cluster==1,]
+hc2_interp_2 = hc2_interpretation[hc2_interpretation$hc2.cluster==2,]
+```
+
+##### Save clusters 1 & 2 with interpretation aids
+```{r}
+write.xlsx(hc2_interp_1, file = "hc_k_2_interpretation.xlsx", sheetName = "clust_1", 
+           col.names = T, row.names = F)
+write.xlsx(hc2_interp_2, file = "hc_k_2_interpretation.xlsx", sheetName = "clust_2", 
+           append = T, col.names = T, row.names = F)
+```
+#### Nb clusters = 7 -> hc_7
+```{r}
+hc_7 = data.frame(society_ids, hc7.res$cluster)
+colnames(hc_7) = c("society_id", "hc7.cluster")
+hc_7
+```
+##### Create hc7_interpretation: Merge hc_7 with interpretation_final
+```{r}
+hc7_interpretation = merge(interpretation_final, hc_7, by.x = "society_id")
+```
+
+##### Separate the 7 clusters for interpretation
+```{r}
+hc7_interp_1 = hc7_interpretation[hc7_interpretation$hc7.cluster==1,]
+hc7_interp_2 = hc7_interpretation[hc7_interpretation$hc7.cluster==2,]
+hc7_interp_3 = hc7_interpretation[hc7_interpretation$hc7.cluster==3,]
+hc7_interp_4 = hc7_interpretation[hc7_interpretation$hc7.cluster==4,]
+hc7_interp_5 = hc7_interpretation[hc7_interpretation$hc7.cluster==5,]
+hc7_interp_6 = hc7_interpretation[hc7_interpretation$hc7.cluster==6,]
+hc7_interp_7 = hc7_interpretation[hc7_interpretation$hc7.cluster==7,]
+```
+
+##### Save clusters 1 to 7 with interpretation aids
+```{r}
+write.xlsx(hc7_interp_1, file = "hc_k_7_interpretation.xlsx", sheetName = "clust_1", 
+           col.names = T, row.names = F)
+write.xlsx(hc7_interp_2, file = "hc_k_7_interpretation.xlsx", sheetName = "clust_2", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc7_interp_3, file = "hc_k_7_interpretation.xlsx", sheetName = "clust_3", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc7_interp_4, file = "hc_k_7_interpretation.xlsx", sheetName = "clust_4", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc7_interp_5, file = "hc_k_7_interpretation.xlsx", sheetName = "clust_5", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc7_interp_6, file = "hc_k_7_interpretation.xlsx", sheetName = "clust_6", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc7_interp_7, file = "hc_k_7_interpretation.xlsx", sheetName = "clust_7", append = T,
+           col.names = T, row.names = F)
+```
+
+#### Nb clusters = 15 -> hc_15
+```{r}
+hc_15 = data.frame(society_ids, hc15.res$cluster)
+colnames(hc_15) = c("society_id", "hc15.cluster")
+hc_15
+```
+
+##### Create hc15_interpretation: Merge hc_15 with interpretation_final
+```{r}
+hc15_interpretation = merge(interpretation_final, hc_15, by.x = "society_id")
+```
+
+##### Separate the 15 clusters for interpretation
+```{r}
+hc15_interp_1 = hc15_interpretation[hc15_interpretation$hc15.cluster==1,]
+hc15_interp_2 = hc15_interpretation[hc15_interpretation$hc15.cluster==2,]
+hc15_interp_3 = hc15_interpretation[hc15_interpretation$hc15.cluster==3,]
+hc15_interp_4 = hc15_interpretation[hc15_interpretation$hc15.cluster==4,]
+hc15_interp_5 = hc15_interpretation[hc15_interpretation$hc15.cluster==5,]
+hc15_interp_6 = hc15_interpretation[hc15_interpretation$hc15.cluster==6,]
+hc15_interp_7 = hc15_interpretation[hc15_interpretation$hc15.cluster==7,]
+hc15_interp_8 = hc15_interpretation[hc15_interpretation$hc15.cluster==8,]
+hc15_interp_9 = hc15_interpretation[hc15_interpretation$hc15.cluster==9,]
+hc15_interp_10 = hc15_interpretation[hc15_interpretation$hc15.cluster==10,]
+hc15_interp_11 = hc15_interpretation[hc15_interpretation$hc15.cluster==11,]
+hc15_interp_12 = hc15_interpretation[hc15_interpretation$hc15.cluster==12,]
+hc15_interp_13 = hc15_interpretation[hc15_interpretation$hc15.cluster==13,]
+hc15_interp_14 = hc15_interpretation[hc15_interpretation$hc15.cluster==14,]
+hc15_interp_15 = hc15_interpretation[hc15_interpretation$hc15.cluster==15,]
+```
+
+##### Save clusters 1 to 15 with interpretation aids
+```{r}
+write.xlsx(hc15_interp_1, file = "hc_k_15_interpretation.xlsx", sheetName = "clust_1", 
+           col.names = T, row.names = F)
+write.xlsx(hc15_interp_2, file = "hc_k_15_interpretation.xlsx", sheetName = "clust_2", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc15_interp_3, file = "hc_k_15_interpretation.xlsx", sheetName = "clust_3", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc15_interp_4, file = "hc_k_15_interpretation.xlsx", sheetName = "clust_4", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc15_interp_5, file = "hc_k_15_interpretation.xlsx", sheetName = "clust_5", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc15_interp_6, file = "hc_k_15_interpretation.xlsx", sheetName = "clust_6", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc15_interp_7, file = "hc_k_15_interpretation.xlsx", sheetName = "clust_7", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc15_interp_8, file = "hc_k_15_interpretation.xlsx", sheetName = "clust_8", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc15_interp_9, file = "hc_k_15_interpretation.xlsx", sheetName = "clust_9", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc15_interp_10, file = "hc_k_15_interpretation.xlsx", sheetName = "clust_10", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc15_interp_11, file = "hc_k_15_interpretation.xlsx", sheetName = "clust_11", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc15_interp_12, file = "hc_k_15_interpretation.xlsx", sheetName = "clust_12", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc15_interp_13, file = "hc_k_15_interpretation.xlsx", sheetName = "clust_13", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc15_interp_14, file = "hc_k_15_interpretation.xlsx", sheetName = "clust_14", append = T,
+           col.names = T, row.names = F)
+write.xlsx(hc15_interp_15, file = "hc_k_15_interpretation.xlsx", sheetName = "clust_15.", append = T,
+           col.names = T, row.names = F)
+```
+
+#### Save the different clustering partitions as .Rda
+```{r}
+save(hc_2, file = "hc_2.Rda")
+save(hc_7, file = "hc_7.Rda")
+save(hc_15, file = "hc_15.Rda")
+```
+
+#### Save the interpretation version of the different clustering partitions
+```{r}
+save(hc2_interpretation, file = "hc2_interpretation.Rda")
+save(hc7_interpretation, file = "hc7_interpretation.Rda")
+save(hc15_interpretation, file = "hc15_interpretation.Rda")
+```
