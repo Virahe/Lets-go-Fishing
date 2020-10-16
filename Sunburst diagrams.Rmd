@@ -1,0 +1,337 @@
+---
+title: "Sunburst diagrams"
+author: "Virginia_Ahedo"
+date: "14/10/2020"
+output: html_document
+---
+
+#### Setup
+#### Clean workspace
+```{r setup, include=FALSE}
+cat("\f")
+rm(list=ls(all=TRUE))
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Set working paths
+```{r}
+setwd("D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing")
+dataPath <- "D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing"
+```
+
+#### Load required libraries
+```{r}
+require(plotly)
+```
+
+### Verification of the precedence relations between the clusters obtained for K = 2, 7, 15.
+#### Load Final Clustering results: k = 2, 7, 15.
+```{r}
+load("hc_2.Rda")
+load("hc_7.Rda")
+load("hc_15.Rda")
+```
+
+#### Subsetting the different clusters
+##### K = 2
+```{r}
+for (i in 1:2){
+  assign(paste("hc2_cluster_", i, sep = ""), hc_2[hc_2$hc2.cluster == i,1])
+}
+```
+
+##### K = 7
+```{r}
+for (j in 1:7){
+  assign(paste("hc7_cluster_", j, sep = ""), hc_7[hc_7$hc7.cluster == j,1])
+}
+```
+
+##### K = 15
+```{r}
+for (k in 1:15){
+  assign(paste("hc15_cluster_", k, sep = ""), hc_15[hc_15$hc15.cluster == k, 1])
+}
+```
+
+### Check correspondences
+#### Correspondence between clusters hc_2 and hc_7
+#### hc2_cluster_1: HGF. 
+##### Possible correspondences in hc_7:
+##### hc7_cluster_1: HGF - Gatherers
+##### hc7_cluster_3: HGF - Hunters
+##### hc7_cluster_7: HGF - Fishers
+##### Check dimensions:
+```{r}
+cat("Length of hc2_cluster_1: ", length(hc2_cluster_1))
+cat("\nLength of hc7_cluster_1: ", length(hc7_cluster_1))
+cat("\nLength of hc7_cluster_3: ", length(hc7_cluster_3))
+cat("\nLength of hc7_cluster_7: ", length(hc7_cluster_7))
+cat("\nSum of these hc7 subclusters: ", length(hc7_cluster_1)+length(hc7_cluster_3)+length(hc7_cluster_7))
+```
+##### Second check
+```{r}
+all(hc7_cluster_1 %in% hc2_cluster_1)
+all(hc7_cluster_3 %in% hc2_cluster_1)
+all(hc7_cluster_7 %in% hc2_cluster_1)
+```
+#### hc2_cluster_2: Agriculture & Husbandry.
+##### Foreseeable correspondences:
+##### hc7_cluster_2: Husbandry
+##### hc7_cluster_4: Agriculturalists
+##### hc7_cluster_5: AgroFishing
+##### hc7_cluster_6: Mixed
+
+#### Check dimensions:
+```{r}
+cat("Length of hc2_cluster_2: ", length(hc2_cluster_2))
+cat("\nLength of hc7_cluster_2: ", length(hc7_cluster_2))
+cat("\nLength of hc7_cluster_4: ", length(hc7_cluster_4))
+cat("\nLength of hc7_cluster_5: ", length(hc7_cluster_5))
+cat("\nLength of hc7_cluster_6: ", length(hc7_cluster_6))
+cat("\nSum of these hc7 subclusters: ", length(hc7_cluster_2)+length(hc7_cluster_4)+length(hc7_cluster_5)
+    +length(hc7_cluster_6))
+```
+
+#### Second check:
+```{r}
+all(hc7_cluster_3 %in% hc2_cluster_2)
+all(hc7_cluster_4 %in% hc2_cluster_2)
+all(hc7_cluster_5 %in% hc2_cluster_2)
+all(hc7_cluster_6 %in% hc2_cluster_2)
+```
+
+#### Correspondence between clusters hc_7 and hc_15
+#### hc7_cluster_1: HGF - Gatherers.
+##### Possible correspondences in hc_15:
+##### hc15_1: HG - Gatherers
+##### hc15_2: HFG - Gatherers
+##### Check dimensions:
+```{r}
+cat("Length of hc7_cluster_1: ", length(hc7_cluster_1))
+cat("\nLength of hc15_cluster_1: ", length(hc15_cluster_1))
+cat("\nLength of hc15_cluster_2: ", length(hc15_cluster_2))
+cat("\nSum of the above-mentioned h_15 subclusters: ", length(hc15_cluster_1) + length(hc15_cluster_2))
+```
+
+##### Second check:
+```{r}
+all(hc15_cluster_1 %in% hc7_cluster_1)
+all(hc15_cluster_2 %in% hc7_cluster_1)
+```
+
+##### hc7_cluster_2: Husbandry.
+##### Foreseeable correspondences in hc_15:
+##### hc15_3: Husbandry(49%) + Agriculture (22%)
+##### hc15_12: Husbandry(75%)
+
+##### Check dimensions:
+```{r}
+cat("Length of hc7_cluster_2: ", length(hc7_cluster_2))
+cat("\nLength of hc15_cluster_3: ", length(hc15_cluster_3))
+cat("\nLength of hc15_cluster_12: ", length(hc15_cluster_12))
+cat("\nSum of the above-mentioned h_15 subclusters: ", length(hc15_cluster_3) + length(hc15_cluster_12))
+```
+##### Second check:
+```{r}
+all(hc15_cluster_3 %in% hc7_cluster_2)
+all(hc15_cluster_12 %in% hc7_cluster_2)
+```
+
+#### hc7_cluster_3: HGF - Hunters
+##### Foreseeable correspondences in hc_15:
+##### hc15_4: HGF - Hunters - G(16%)H(70%)F(9%)
+
+##### Check dimensions:
+```{r}
+cat("Length of hc7_cluster_3: ", length(hc7_cluster_3))
+cat("\nLength of hc15_cluster_4: ", length(hc15_cluster_4))
+```
+
+##### Second check:
+```{r}
+all(hc15_cluster_4 %in% hc7_cluster_3)
+```
+
+#### hc7_cluster_4: Agriculture(62%) + Husbandry(20%)
+##### Possible correspondences:
+##### hc15_cluster_5: Agro(63%)pastoralists(22%)
+##### hc15_cluster_6: Agriculture(50%) + Husbandry(35%)
+##### hc15_cluster_8: Agro(66%)Hunting(12%) + Husbandry(10%)
+##### Check dimensions:
+```{r}
+cat("Length of hc7_cluster_4 ", length(hc7_cluster_4))
+cat("\nLength of hc15_cluster_5: ", length(hc15_cluster_5))
+cat("\nLength of hc15_cluster_6: ", length(hc15_cluster_6))
+cat("\nLength of hc15_cluster_8: ", length(hc15_cluster_8))
+cat("\nSum of the above-mentioned h_15 subclusters: ", length(hc15_cluster_5) + length(hc15_cluster_6) + length(hc15_cluster_8)) 
+```
+##### Second check:
+```{r}
+all(hc15_cluster_5 %in% hc7_cluster_4)
+all(hc15_cluster_6 %in% hc7_cluster_4)
+all(hc15_cluster_8 %in% hc7_cluster_4)
+```
+
+#### hc7_cluster_5: Agro(51%)Fishing(28%) + Husbandry(10%)
+##### Foreseeable correspondences:
+##### hc15_cluster_7: Agro(54%)Fishing(20%) + Husbandry(13%)
+##### hc15_cluster_9: Agro(47%)Fishing(37%)
+##### Check dimensions:
+```{r}
+cat("Length of hc7_cluster_5: ", length(hc7_cluster_5))
+cat("\nLength of hc15_cluster_7: ", length(hc15_cluster_7))
+cat("\nLength of hc15_cluster_9: ", length(hc15_cluster_9))
+cat("\nSum of the above-mentioned clusters: ", length(hc15_cluster_7) + length(hc15_cluster_9))
+```
+##### Second check
+```{r}
+all(hc15_cluster_7 %in% hc7_cluster_5)
+all(hc15_cluster_9 %in% hc7_cluster_5)
+```
+
+#### hc7_cluster_6: HGF + Agriculture
+##### Possible correspondences:
+##### hc15_10: Agro(45%)Hunting(28%) + Fishing(18%)
+##### hc15_15: HFG + Agriculture
+
+##### Check dimensions:
+```{r}
+cat("Length of hc7_cluster_6: ", length(hc7_cluster_6))
+cat("\nLength of hc15_cluster_10: ", length(hc15_cluster_10))
+cat("\nLength of hc15_cluster_15: ", length(hc15_cluster_15))
+cat("\nSum of the above-mentioned clusters: ", length(hc15_cluster_10) + length(hc15_cluster_15))
+```
+##### Second check:
+```{r}
+all(hc15_cluster_10 %in% hc7_cluster_6)
+all(hc15_cluster_15 %in% hc7_cluster_6)
+```
+
+#### hc7_cluster_7: HGF - Fishers
+##### Foreseeable correspondences:
+##### hc15_cluster_11:Fishers
+##### hc15_cluster_13: HGF - Fishers
+##### hc15_cluster_14: Hunter(39%) - Fishers (48%)
+
+##### Check dimensions:
+```{r}
+cat("Length of hc7_cluster_7: ", length(hc7_cluster_7))
+cat("\nLength of hc15_cluster_11: ", length(hc15_cluster_11))
+cat("\nLength of hc15_cluster_13: ", length(hc15_cluster_13))
+cat("\nLength of hc15_cluster_14: ", length(hc15_cluster_14))
+cat("\nSum of the above-mentioned clusters: ", length(hc15_cluster_11) + length(hc15_cluster_13) + length(hc15_cluster_14))
+```
+##### Second check:
+```{r}
+all(hc15_cluster_11 %in% hc7_cluster_7)
+all(hc15_cluster_13 %in% hc7_cluster_7)
+all(hc15_cluster_14 %in% hc7_cluster_7)
+```
+
+### Sunburst diagram
+#### With cluster numbers
+```{r}
+hc2_7_15 <- plot_ly(
+  labels = c("hc2_1", "hc2_2",
+             "hc7_1", "hc7_2", "hc7_3", "hc7_4", "hc7_5", "hc7_6", "hc7_7",
+             "hc15_1", "hc15_2", "hc15_3", "hc15_4", "hc15_5", "hc15_6", "hc15_7", 
+             "hc15_8", "hc15_9", "hc15_10", "hc15_11", "hc15_12", "hc15_13", "hc15_14", 
+             "hc15_15"),
+  parents = c("","",
+              "hc2_1", "hc2_2", "hc2_1", "hc2_2", "hc2_2", "hc2_2", "hc2_1",
+              "hc7_1", "hc7_1", "hc7_2", "hc7_3", "hc7_4", "hc7_4", "hc7_5", "hc7_4", "hc7_5", "hc7_6",
+              "hc7_7", "hc7_2", "hc7_7", "hc7_7", "hc7_6"),
+  values = c(275, 1015, 136, 78, 24, 613, 226, 98, 115, 50, 86, 39, 24, 247, 122, 117, 244, 109, 
+             49, 15, 39, 68, 32, 49),
+  # marker = list(colors = c("#a50026", "#313695", "#d73027", "#f46d43", "#4575b4", "#74add1", 
+  #                          "#e0f3f8", "#abd9e9", "#fdae61")),
+  marker = list(colors = c("#a50026", "#313695", "#d73027", "#4575b4", "#f46d43", "#74add1", 
+                           "#abd9e9", "#e0f3f8", "#fdae61")),
+  type = "sunburst",
+  branchvalues = "total",
+  insidetextorientation='radial',
+  width = 700,
+  height = 700
+)
+
+hc2_7_15
+# c("orange","green","sienna1", "tan1", "mediumseagreen", "olivedrab1", "limegreen",
+#                            "seagreen", "salmon")
+# c("#d73027", "#4575b4", "#f46d43", "#fdae61", "#74add1", "#abd9e9", "#e0f3f8",
+#                           "#ffffbf","#fee090")
+# c(inlmisc::GetColors(n=24, scheme = "sunset"))
+# c("#c51b7d", "#4d9221", "#de77ae", "#f1b6da", "#7fbc41", "#b8e186", "#e6f5d0",
+#                            "#f7f7f7", "#fde0ef")
+```
+
+#### With cluster description
+```{r}
+hc2_7_15_desc <- plot_ly(
+  labels = c("HGF", "Agriculture & Husbandry",
+             "HGF-Gatherers", "Husbandry(62%) + Agric.(17%)", "HGF-Hunters", "Agriculture(62%) + Husb.(20%)",
+             "AgroFishing", "HGF + Agriculture", "HGF-Fishers",
+             "HG Gatherers - H(32%)G(57%)", "HGF - H(35%)G(37%)F(22%)", "Husb.(49%)Agric.(22%)+H(12%)F(11%)", 
+             "Hunters - H(70%)G(16%)F(9%)", "Agro(63%)Pastoralists(22%)", "Agro(50%)Pastoralists(35%)",
+             "Agro(54%)Fishing(20%)+Husb.(13%)", "Agro(66%)Hunting(12%)+Husb.(10%)", "Agro(47%)Fishing(37%)+Husb.(7%)",
+             "Agro(45%)Hunting(28%)+Fish.(18%)","Fishers - H(14%)F(72%)", "Husbandry(75%) + Agric.(13%)", 
+             "HGF-Fishers - H(23%)G(26%)F(45%)", "Hunter-Fishers - H(39%)F(48%)", 
+             "H(21%)G(25%)F(15%)+Agric.(35%)"),
+  parents = c("","",
+              "HGF", "Agriculture & Husbandry", "HGF", "Agriculture & Husbandry", "Agriculture & Husbandry", 
+              "Agriculture & Husbandry", "HGF",
+              "HGF-Gatherers", "HGF-Gatherers", "Husbandry(62%) + Agric.(17%)", "HGF-Hunters", "Agriculture(62%) + Husb.(20%)", 
+              "Agriculture(62%) + Husb.(20%)", "AgroFishing", "Agriculture(62%) + Husb.(20%)", "AgroFishing", 
+              "HGF + Agriculture","HGF-Fishers", "Husbandry(62%) + Agric.(17%)", 
+              "HGF-Fishers", "HGF-Fishers", "HGF + Agriculture"),
+  values = c(275, 1015, 136, 78, 24, 613, 226, 98, 115, 50, 86, 39, 24, 247, 122, 117, 244, 109, 
+             49, 15, 39, 68, 32, 49),
+  marker = list(colors = c("#a50026", "#313695", "#d73027", "#4575b4", "#f46d43", "#74add1", 
+                           "#abd9e9", "#e0f3f8", "#fdae61")),
+  type = "sunburst",
+  branchvalues = "total",
+  insidetextorientation='radial',
+  width = 1200,
+  height = 1200
+)
+hc2_7_15_desc
+```
+
+##### Another colouring possibility
+```{r}
+hc2_7_15_desc_2 <- plot_ly(
+  labels = c("HGF", "Agriculture & Husbandry",
+             "HGF-Gatherers", "Husbandry(62%) + Agric.(17%)", "HGF-Hunters", "Agriculture(62%) + Husb.(20%)",
+             "AgroFishing", "HGF + Agriculture", "HGF-Fishers",
+             "HG Gatherers - H(32%)G(57%)", "HGF - H(35%)G(37%)F(22%)", "Husb.(49%)Agric.(22%)+H(12%)F(11%)", 
+             "Hunters - H(70%)G(16%)F(9%)", "Agro(63%)Pastoralists(22%)", "Agro(50%)Pastoralists(35%)",
+             "Agro(54%)Fishing(20%)+Husb.(13%)", "Agro(66%)Hunting(12%)+Husb.(10%)", "Agro(47%)Fishing(37%)+Husb.(7%)",
+             "Agro(45%)Hunting(28%)+Fish.(18%)","Fishers - H(14%)F(72%)", "Husbandry(75%) + Agric.(13%)", 
+             "HGF-Fishers - H(23%)G(26%)F(45%)", "Hunter-Fishers - H(39%)F(48%)", 
+             "H(21%)G(25%)F(15%)+Agric.(35%)"),
+  parents = c("","",
+              "HGF", "Agriculture & Husbandry", "HGF", "Agriculture & Husbandry", "Agriculture & Husbandry", 
+              "Agriculture & Husbandry", "HGF",
+              "HGF-Gatherers", "HGF-Gatherers", "Husbandry(62%) + Agric.(17%)", "HGF-Hunters", "Agriculture(62%) + Husb.(20%)", 
+              "Agriculture(62%) + Husb.(20%)", "AgroFishing", "Agriculture(62%) + Husb.(20%)", "AgroFishing", 
+              "HGF + Agriculture","HGF-Fishers", "Husbandry(62%) + Agric.(17%)", 
+              "HGF-Fishers", "HGF-Fishers", "HGF + Agriculture"),
+  values = c(275, 1015, 136, 78, 24, 613, 226, 98, 115, 50, 86, 39, 24, 247, 122, 117, 244, 109, 
+             49, 15, 39, 68, 32, 49),
+  marker = list(colors = c("#8e0152", "#276419", "#c51b7d", "#4d9221", "#de77ae", "#7fbc41", 
+                           "#b8e186", "#e6f5d0", "#f1b6da")),
+  type = "sunburst",
+  branchvalues = "total",
+  insidetextorientation='radial',
+  width = 1200,
+  height = 1200
+)
+hc2_7_15_desc_2
+```
+
+##### Save to pdf
+```{r}
+orca(hc2_7_15_desc_2, "Sunburst_hc2_7_15_explained.pdf")
+orca(hc2_7_15, "Sunburst_hc2_7_15_clust_nb.pdf")
+```
+
