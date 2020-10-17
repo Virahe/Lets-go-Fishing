@@ -1,0 +1,118 @@
+---
+title: "Multiple imputation MICE"
+author: "Virginia_Ahedo"
+date: "11/10/2020"
+output: rmarkdown::github_document
+---
+
+#### Setup
+#### Clean workspace
+```{r setup, include=FALSE}
+cat("\f")
+rm(list=ls(all=TRUE))
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Set working paths
+```{r}
+setwd("D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing")
+dataPath <- "D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing"
+```
+
+#### Parallel execution: 6 cores
+```{r}
+require(doParallel)
+cl <- makeCluster(12)
+registerDoParallel(cl)
+```
+
+#### Load "Database_for_MICE.Rda"
+```{r}
+load("Database_for_MICE.Rda")
+```
+
+##### Check the dimensions of EA_ecoClimate_final
+```{r}
+dim(EA_ecoClimate_final)
+names(EA_ecoClimate_final)
+```
+##### Load "Named_Clustering_db.Rda", to make sure that in the Supervised Learning approach we are working with exactly the same societies as in the Clustering Analysis section.
+```{r}
+load("Named_Clustering_db.Rda")
+dim(named_clust_db)
+names(named_clust_db)
+```
+##### Find out which is the society that makes the difference between EA_ecoClimate_final and named_clust_db
+```{r}
+which(EA_ecoClimate_final$society_id %in% named_clust_db$society_id == FALSE)
+```
+```{r}
+EA_ecoClimate_final[1125, ]
+```
+##### Drop row 1125 from EA_ecoClimate_final
+```{r}
+data = EA_ecoClimate_final[-1125,]
+str(data)
+```
+
+### MULTIPLE IMPUTATION
+#### Preliminary Analysis with VIM 
+```{r}
+library(VIM)
+data_plot <- aggr(data, col=c('navyblue','yellow'),
+                    numbers=TRUE, sortVars=TRUE,
+                    labels=names(data), cex.axis=.7,
+                    gap=3, ylab=c("Missing data","Pattern"))
+
+```
+
+#### Preliminary analysis with naniar
+```{r}
+library(naniar)
+naniar::gg_miss_var(data)
+```
+
+#### Preliminary analysis with VIM (restricted to variables with NAs)
+```{r}
+
+subsetdataWithNA<-data[,colSums(is.na.data.frame(data))>0]
+
+data_plot <- aggr(subsetdataWithNA, col=c('navyblue','yellow'),
+                    numbers=TRUE, sortVars=TRUE,
+                    labels=names(subsetdataWithNA), cex.axis=.45,cex.numbers = 0.7,
+                    gap=3, ylab=c("Missing data","Pattern"))
+
+```
+
+#### Preliminary analysis witn naniar (restricted to variables with NAs)
+```{r}
+library(naniar)
+naniar::gg_miss_var(subsetdataWithNA)
+```
+##### Additional visualizations
+```{r}
+# https://cran.r-project.org/web/packages/naniar/vignettes/getting-started-w-naniar.html
+library(visdat)
+vis_dat(data)
+```
+```{r}
+vis_miss(data)
+```
+### Data imputation with MICE
+#### MICE is the most suitable tool for MULTIPLE IMPUTATION
+```{r}
+library(mice)
+```
+
+##### Drop society_id from data before performing the data imputation with MICE
+```{r}
+require(dplyr)
+data_final = select(data, -c("society_id"))
+str(data_final)
+```
+
+```{r}
+data_imp_MICE <-mice(data=data_final, m=100,maxit=50,method='rf', remove.collinear = FALSE,seed=27)
+saveRDS(data_imp_MICE, file="data_imp_MICE_def.Rda")
+```
+
