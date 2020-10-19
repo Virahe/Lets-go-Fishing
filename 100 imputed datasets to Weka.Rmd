@@ -1,0 +1,61 @@
+---
+title: "100 imputed datasets to Weka"
+author: "Virginia_Ahedo"
+date: "11/10/2020"
+output: rmarkdown::github_document
+---
+
+#### Setup
+#### Clean workspace
+```{r setup, include=FALSE}
+cat("\f")
+rm(list=ls(all=TRUE))
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Set working paths
+```{r}
+setwd("D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing")
+dataPath <- "D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing"
+```
+
+#### Load required libraries
+```{r}
+require(mice)
+require(dplyr)
+require(varhandle)
+require(RWeka)
+```
+#### Load Multiple Imputation (MICE) results
+```{r}
+imp_data_mice = readRDS("data_imp_MICE_def.Rda")
+```
+
+#### Load hierarchical clustering results for K = 15
+```{r}
+load("hc_15.Rda")
+str(hc_15)
+```
+
+##### We transform hc_15$hc15.cluster into factor so that randomForest function assumes classification
+```{r}
+cluster = as.factor(hc_15$hc15.cluster)
+```
+
+#### Obtain the 100 datasets imputed with MICE and join each dataset with the result obtained from hc for K = 15.
+##### Drop variables from EA001 to EA005, as after a conversation with the experts on the field, we agreed not to consider them in the RF analysis (they will be highly correlated with the cluster assignments). 
+```{r}
+for (k in 1:100){
+  # Obtention of the imputed datasets
+  imputedDataSet<-complete(imp_data_mice, k)
+  not_for_RF = c("Gathering", "Hunting", "Fishing", "Husbandry", "Agriculture")
+  imputedDataSet <- select(imputedDataSet, -all_of(not_for_RF))
+  imputedDataSet = cbind(imputedDataSet, cluster)
+
+  # Saving the imputed datasets as .arff
+  arff_name = sprintf('MICE_imputed_df_K15_%s.arff', k)
+  path <- "D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing/Multiple_Imputation_4_Weka_K15"
+  write.arff(imputedDataSet, file.path(path, file = arff_name))
+}
+```
+
