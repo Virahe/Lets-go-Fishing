@@ -1,0 +1,135 @@
+---
+title: "Check order MICE"
+author: "Virginia_Ahedo"
+date: "19/10/2020"
+output: rmarkdown::github_document
+---
+
+#### Setup
+#### Clean workspace
+```{r setup, include=FALSE}
+cat("\f")
+rm(list=ls(all=TRUE))
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Set working paths
+```{r}
+setwd("D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing")
+dataPath <- "D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing"
+```
+
+#### Load required libraries
+```{r}
+require(mice)
+require(dplyr)
+require(varhandle)
+require(RWeka)
+```
+
+#### Load Multiple Imputation (MICE) results
+```{r}
+imp_data_mice = readRDS("data_imp_MICE_def.Rda")
+```
+
+#### Load hierarchical clustering results for K = 15
+```{r}
+load("hc_15.Rda")
+str(hc_15)
+```
+
+#### Load "Database_for_MICE.Rda"
+```{r}
+load("Database_for_MICE.Rda")
+```
+
+##### Drop row 1125 from EA_ecoClimate_final
+```{r}
+data = EA_ecoClimate_final[-1125,]
+str(data)
+```
+
+##### Given that we dropped the col "society_id" before performing the multiple imputation via MICE, it is necessary to check that mice preserves the order of rows in the imputed datasets before joining them with the clustering results for K = 15 (cluster assignments).
+
+#### Obtention of the 1st imputed dataset
+```{r}
+imputedDataSet_1<-complete(imp_data_mice, 1)
+```
+
+##### Check that the "society_id" order in hc_15 and in data is the same
+```{r}
+names(data)
+```
+```{r}
+str(hc_15$society_id)
+```
+```{r}
+str(data$society_id)
+```
+#### Load "compare" package
+```{r}
+require(compare)
+```
+```{r}
+compare(unfactor(hc_15$society_id), data$society_id, ignoreOrder = F)
+```
+##### Check that the order in imputedDataSet_1 is the same as in data (EA001 to EA005) 
+```{r}
+names(imputedDataSet_1)
+```
+
+```{r}
+str(imputedDataSet_1[,1:5])
+```
+```{r}
+str(data[,2:6])
+```
+```{r}
+comparison = compare(imputedDataSet_1[,1:5], data[,2:6], ignoreOrder = F)
+comparison$detailedResult
+```
+```{r}
+comparison$transform
+```
+```{r}
+comparison$result
+```
+
+##### Let's try to find the difference with all.equal()
+```{r}
+all.equal(imputedDataSet_1[,1:5], data[,2:6])
+```
+##### Obtain row.names for both imputedDataSet_1 and data
+```{r}
+rn_imputed = row.names(imputedDataSet_1)
+rn_data = row.names(data)
+```
+
+
+```{r}
+which(rn_imputed %in% rn_data == FALSE)
+```
+
+```{r}
+length(row.names(data))
+```
+
+```{r}
+length(row.names(imputedDataSet_1))
+```
+```{r}
+all.equal(rn_data, rn_imputed)
+
+```
+
+##### Check if by setting row.names <- NULL we solve the problem
+```{r}
+row.names(data) <- NULL
+row.names(imputedDataSet_1) <- NULL
+```
+
+##### Second check
+```{r}
+compare(imputedDataSet_1[,1:5], data[,2:6], ignoreOrder = F)
+```
+
