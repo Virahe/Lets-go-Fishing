@@ -1,0 +1,185 @@
+---
+title: "AOV & Duncan tests"
+author: "Virginia_Ahedo"
+date: "19/10/2020"
+output: rmarkdown::github_document
+---
+
+#### Setup
+#### Clean workspace
+```{r setup, include=FALSE}
+cat("\f")
+rm(list=ls(all=TRUE))
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Load required libraries
+```{r}
+require(xlsx)
+require(agricolae)
+require(tidyverse)
+```
+
+#### Load results experimenter K = 15, datasets = 1:50
+```{r}
+setwd("D:/OneDrive - Universidad de Burgos/Goonies/CULM/Weka_experimenter")
+results_k15_1_50 = read.csv("results_experimenter_classification_1_50.csv", header = T,
+                            sep = ",", fileEncoding = "UTF-8")
+```
+#### Load results experimenter K = 15, datasets = 51:100
+```{r}
+setwd("D:/OneDrive - Universidad de Burgos/Goonies/CULM/Weka_experimenter")
+results_k15_51_100 = read.csv("results_experimenter_classification_test_Josema.csv", header = T,
+                            sep = ",", fileEncoding = "UTF-8")
+```
+##### Check the structure of results_k15_1_50
+```{r}
+str(results_k15_1_50)
+```
+##### Check dimensions of results_k15_1_50
+```{r}
+dim(results_k15_1_50)
+```
+##### The dimensions obtained make sense since we have performed 10-fold CV on 50 datasets and applied 6 algorithms (6*x*10*50)
+
+##### Check the structure of results_k15_51_100
+```{r}
+str(results_k15_51_100)
+```
+##### Check dimensions of results_k15_51_100
+```{r}
+dim(results_k15_51_100)
+```
+#### Extract the results
+##### We begin with results_k15_1_50
+##### 50 datasets * 10 folds = 500; 500 rows/algorithm * 6 algorithms = 3000
+##### Beginning of each dataset in algorithm 1: 
+```{r}
+beg_1 = seq(1, 500, by = 10)
+beg_1
+```
+##### Length of beg_1
+```{r}
+length(beg_1)
+```
+##### Number of folds
+```{r}
+n_folds = 10
+```
+##### Definition of necessary variables for k_1_50
+```{r}
+Accuracy_df_1_50 = data.frame(matrix(NA, nrow = 60, ncol = 50))
+# nrow = 60: 6 algorithms * 10 folds/algorithm
+# ncols = 50: 50 datasets
+Algorithm_names = as.factor(c(rep("ZeroR", n_folds), rep("OneR", n_folds), rep("AdaBoost", n_folds),
+                    rep("SVM_poly", n_folds), rep("RandomForest", n_folds), 
+                    rep("RotationForest", n_folds)))
+aov_pvalues_1_50 = as.numeric(rep(NA,50))
+Duncan_df_1_50 = data.frame(matrix(NA, nrow = 6, ncol = 150))
+RF_group_1_50 = as.character(rep(NA,50))
+# nrow = 6 because we have 6 algorithms
+# ncol = 150 because we keep algorithm name, accuracies and group (3 variables per dataset)
+duncan_seq_ini = seq(1, 150, by = 3)
+duncan_seq_end = seq(3, 150, by = 3)
+```
+
+##### Information retrieval
+```{r}
+for (i in 1:50){ #i selects the dataset
+  alg_counter = 0
+  for (j in seq(1, 60, by=10)){
+    #j selects the index to access Accuracy_df_1_50 (10 rows for each algorithm)
+    k_ini = beg_1[i] + 500*alg_counter #beginning of the folds for each algorithm
+    k_end = k_ini + 9
+    Accuracy_df_1_50[j:(j+9),i] = results_k15_1_50[k_ini:k_end,]$"Percent_correct"
+    alg_counter = alg_counter + 1
+  }
+  # Test Anova
+  anova_data_i = data.frame(as.numeric(Accuracy_df_1_50[,i]), Algorithm_names)
+  colnames(anova_data_i) <- c("Percent_correct", "Algorithm")
+  anova_test_i <- aov(anova_data_i$Percent_correct~anova_data_i$Algorithm, data = anova_data_i)
+  aov_pvalues_1_50[i] <- summary(anova_test_i)[[1]][["Pr(>F)"]][1]
+  
+  # Multiple comparison test
+  mult_comp_i <- duncan.test(anova_test_i, "anova_data_i$Algorithm", alpha = 0.05)
+  Duncan_df_1_50[,duncan_seq_ini[i]:duncan_seq_end[i]] <- cbind(row.names(mult_comp_i$groups),
+                                                       mult_comp_i$groups)
+  RF_group_1_50[i] = as.character(mult_comp_i[[6]]["RandomForest","groups"])
+}
+```
+
+#### Do the same now with results_k15_51_100
+##### Definition of necessary variables for k_51_100
+```{r}
+Accuracy_df_51_100 = data.frame(matrix(NA, nrow = 60, ncol = 50))
+# nrow = 60: 6 algorithms * 10 folds/algorithm
+# ncols = 50: 50 datasets
+Algorithm_names = as.factor(c(rep("ZeroR", n_folds), rep("OneR", n_folds), rep("AdaBoost", n_folds),
+                    rep("SVM_poly", n_folds), rep("RandomForest", n_folds), 
+                    rep("RotationForest", n_folds)))
+aov_pvalues_51_100 = as.numeric(rep(NA,50))
+Duncan_df_51_100 = data.frame(matrix(NA, nrow = 6, ncol = 150))
+RF_group_51_100 = as.character(rep(NA,50))
+# nrow = 6 because we have 6 algorithms
+# ncol = 150 because we keep algorithm name, accuracies and group (3 variables per dataset)
+duncan_seq_ini = seq(1, 150, by = 3)
+duncan_seq_end = seq(3, 150, by = 3)
+```
+
+##### Information retrieval
+```{r}
+for (i in 1:50){ #i selects the dataset
+  alg_counter = 0
+  for (j in seq(1, 60, by=10)){
+    #j selects the index to access Accuracy_df_1_50 (10 rows for each algorithm)
+    k_ini = beg_1[i] + 500*alg_counter #beginning of the folds for each algorithm
+    k_end = k_ini + 9
+    Accuracy_df_51_100[j:(j+9),i] = results_k15_51_100[k_ini:k_end,]$"Percent_correct"
+    alg_counter = alg_counter + 1
+  }
+  # Test Anova
+  anova_data_i = data.frame(as.numeric(Accuracy_df_51_100[,i]), Algorithm_names)
+  colnames(anova_data_i) <- c("Percent_correct", "Algorithm")
+  anova_test_i <- aov(anova_data_i$Percent_correct~anova_data_i$Algorithm, data = anova_data_i)
+  aov_pvalues_51_100[i] <- summary(anova_test_i)[[1]][["Pr(>F)"]][1]
+  
+  # Multiple comparison test
+  mult_comp_i <- duncan.test(anova_test_i, "anova_data_i$Algorithm", alpha = 0.05)
+  Duncan_df_51_100[,duncan_seq_ini[i]:duncan_seq_end[i]] <- cbind(row.names(mult_comp_i$groups),
+                                                       mult_comp_i$groups)
+  RF_group_51_100[i] = as.character(mult_comp_i[[6]]["RandomForest","groups"])
+}
+```
+#### Join results 1_50 and 51_100
+#### p_value
+```{r}
+aov_pvalues_1_100 = c(aov_pvalues_1_50, aov_pvalues_51_100)
+```
+##### Check that the AOV null hypothesis that the means of the different groups are the same can be rejected in all cases (p-value < 0.05)
+```{r}
+aov_pvalues_1_100 < 0.05
+```
+```{r}
+sum(aov_pvalues_1_100 < 0.05)
+```
+#### Group to which RF belongs according to the Duncan test
+```{r}
+RF_group_1_100 = c(RF_group_1_50, RF_group_51_100)
+RF_group_1_100
+```
+##### Check that in all cases RF group is "a"
+##### If length(unique(x)) == 1, all values are equal
+```{r}
+length(unique(RF_group_1_100))
+```
+#### Detail of the Duncan test (joined)
+```{r}
+Duncan_df_1_100 = cbind(Duncan_df_1_50, Duncan_df_51_100)
+dim(Duncan_df_1_100)
+```
+##### Save the detailed table of the 100 Duncan tests (one test per dataset)
+```{r}
+save(Duncan_df_1_100, file = "Detailed_Duncan_df_1_100.Rda")
+write.csv(Duncan_df_1_100, "Detailed_Duncan_df_1_100.csv")
+```
+
