@@ -1,0 +1,213 @@
+---
+title: "Variable Importance Analysis for k = 15"
+author: "Virginia_Ahedo"
+date: "20/10/2020"
+output: rmarkdown::github_document
+---
+
+#### Setup
+#### Clean workspace
+```{r setup, include=FALSE}
+cat("\f")
+rm(list=ls(all=TRUE))
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Set working paths
+```{r}
+setwd("D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing")
+dataPath <- "D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing"
+```
+
+#### Parallel execution
+```{r}
+require(doParallel)
+cl <- makeCluster(6)
+registerDoParallel(cl)
+```
+
+#### Load required libraries
+```{r}
+require(dplyr)
+require(randomForestSRC)
+require(RWeka)
+```
+
+#### RandomForestSRC: rfsrc function details
+##### https://cran.r-project.org/web/packages/randomForestSRC/randomForestSRC.pdf
+```{r}
+#rfsrc function arguments:
+# - data: Data frame containing the y-outcome and x-variables
+# - ntree: number of trees. ntree should be set fairly high - we recommend using 1000 times the number of features
+# - mtry: default: sqrt(p) for classification
+# - importance: To obtain VIMP use the option importance. Setting this to "permute" returns permutation VIMP from permuting OOB cases. 
+# - VIMP depends upon block.size. When block.size=1, VIMP is calculated by tree. The difference between prediction error under the perturbed predictor and the original predictor is calculated for each tree and averaged over the forest. This yields Breiman-Cutler VIMP (Breiman 2001).
+# - block.size: default: 10.
+# - bootstrap: 	Bootstrap protocol. The default is by.root which bootstraps the data by sampling with or without replacement (by default sampling is without replacement; see the option samptype below).
+# - samptype: Type of bootstrap when by.root is in effect. Unlike Breiman's random forests, the default action here is sampling without replacement. Thus out-of-bag (OOB) technically means out-of-sample. Choice: "swr" sampling with replacement 
+# - sampsize: For sampling without replacement it is 0.632 the sample size.
+# -forest: vimp.rfsrc requires forest = T in the original call
+```
+
+#### Variable importance analyses on an example dataset
+##### Set seed
+```{r}
+set.seed(7)
+```
+
+##### Load example dataset
+```{r}
+setwd("D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing/Multiple_Imputation_4_Weka_K15/")
+example_dataset = read.arff(file = "MICE_imputed_df_K15_1.arff")
+```
+##### Check dimensions of example dataset
+```{r}
+dim(example_dataset)
+```
+##### Check variables included in example_dataset
+```{r}
+names(example_dataset)
+```
+##### Note that "Gathering", "Hunting", "Fishing", "Husbandry", "Agriculture" have already been dropped and cluster has already been included.
+
+##### RF model for the example_dataset
+```{r}
+# Random Forest with RandomForestSRC:
+# - formula: symbolic description of the model to be fit.
+# - data: imputedDataSet
+# - ntree: 3000.
+# - importance = "permute" (permutation VIMP from permuting OOB cases)
+# - block.size = 1 (Difference between prediction error under the perturbed predictor and the original is
+#   calculated for each tree and averaged over the forest. This yields Breiman 2001)
+# - bootstrap = "by.root" (default)
+# - samptype = "swr" sampling with replacement (Type of bootstrap when "by.root" is in effect)
+# - forest = T (vimp.rfsrc requires forest = T in the original call)
+
+rf_example = rfsrc(formula = cluster ~ ., data = example_dataset, ntree = 3000, importance = "permute",
+                   block.size = 1, bootstrap = "by.root", samptype = "swr", forest = T)
+```
+
+##### Individual variable importance on example_dataset
+```{r}
+var_imp_example = vimp.rfsrc(rf_example)$importance
+dim(var_imp_example)
+```
+##### Show var_imp_example
+```{r}
+var_imp_example
+```
+###### The first col. (all) is the decrease in predictive accuracy averaged over all classes, the other 15 cols. are the decrease in predictive accuracy in each class. We will keep col. 1.
+
+##### Group variable importance on example dataset: groups considered
+```{r}
+# Group 1: Agriculture-related variables:
+# - EA028: Agriculture intensity
+# - EA029: Major crop type
+# - EA039: Plow cultivation
+group_1_varImp_ex = vimp.rfsrc(rf_example, c("Agriculture_intensity", "Major_crop_type", 
+                                          "Plow_cultivation"), joint = TRUE)$importance[1]
+
+# Group 2: Husbandry-related variables:
+# - EA040: Domestic animals type
+# - EA041: Milking
+group_2_varImp_ex = vimp.rfsrc(rf_example, c("Animal_type", "Milking"), joint = TRUE)$importance[1]
+
+# Group 3: Demographic/degree of complexity variables
+# - EA030: Prevailing type settlement pattern
+# - EA033: Political complexity
+# - EA202: Population size
+group_3_varImp_ex = vimp.rfsrc(rf_example, c("Settlement_pattern", "Political_complexity",
+                                          "Population_size"), joint = TRUE)$importance[1]
+
+# Group 4: Ecological variables: 2+3+4+5+6
+# 2. Variables from Jenkins et al. 2013:
+# - Amphibian Richness
+# - Bird Richness
+# - Mammal Richness
+#
+# 3. Variables from Kreft and Jetz
+# - Vascular plants Richness
+#
+# 4. Variables from Moderate Resolution Imaging Spectroradiometer
+# - Annual NPP Variance
+# - Monthly mean NPP
+# - NPP Constancy
+# - NPP Contingency
+# - NPP Predictability
+#
+# 5. Variables from Terrestrial Ecoregions of the World
+# - Biome
+#
+# 6. Variables from Baseline Historical ecoClimate model
+# - Annual Mean Temperature
+# - Annual Precipitation Variance
+# - Annual Temperature Variance
+# - Monthly Mean Precipitation
+# - Precipitation Constancy
+# - Precipitation Contingency
+# - Precipitation Predictability
+# - Temperature Constancy
+# - Temperature Contingency
+# - Temperature Predictability
+group_4_varImp_ex = vimp.rfsrc(rf_example, names(example_dataset[,9:28]),
+                               joint = TRUE)$importance[1]
+```
+
+#### Variable importance analyses on the 100 imputed datasets with K = 15
+##### Definition of the necessary variables for individual variable importance
+```{r}
+#28 predictors, 100 imputed datasets
+ind_varImpMatrix <- data.frame(matrix(nrow = 28, ncol = 100)) #each dataset is a col.
+row.names(ind_varImpMatrix) <- rownames(var_imp_example)
+```
+
+##### Definition of the necessary variables for group variable importance
+```{r}
+group_varImpMatrix <- data.frame(matrix(nrow = 4, ncol = 100))
+row.names(group_varImpMatrix) <- c("Agriculture-related", "Husbandry-related", "Complexity-degree",
+                                   "Ecological")
+```
+
+##### Loop definition
+```{r}
+# Change working directory
+setwd("D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing/Multiple_Imputation_4_Weka_K15/")
+
+# Loop
+for(k in 1:100){
+  imputedDataSet <- read.arff(paste("MICE_imputed_df_K15_",k,".arff", sep = ""))
+  # Random Forest with RandomForestSRC:
+  # - formula: symbolic description of the model to be fit.
+  # - data: imputedDataSet
+  # - ntree: 3000.
+  # - importance = "permute" (permutation VIMP from permuting OOB cases)
+  # - block.size = 1 (Difference between prediction error under the perturbed predictor and the original is
+  #   calculated for each tree and averaged over the forest. This yields Breiman 2001)
+  # - bootstrap = "by.root" (default)
+  # - samptype = "swr" sampling with replacement (Type of bootstrap when "by.root" is in effect)
+  # - forest = T (vimp.rfsrc requires forest = T in the original call)
+  rf = rfsrc(formula = cluster ~ ., data = imputedDataSet, ntree = 3000, importance = "permute", block.size = 1,
+           bootstrap = "by.root", samptype = "swr", forest = T)
+
+  # Individual variable importance
+  ind_varImpMatrix[,k] = data.frame(vimp.rfsrc(rf)$importance[,1])
+
+  # Group variable importance
+  # Group 1: Agriculture-related variables:
+  group_1_varImp = vimp.rfsrc(rf, c("Agriculture_intensity", "Major_crop_type", "Plow_cultivation"),
+                            joint = TRUE)$importance[1]
+  # Group 2: Husbandry-related variables:
+  group_2_varImp = vimp.rfsrc(rf, c("Animal_type", "Milking"), joint = TRUE)$importance[1]
+  # Group 3: Demographic variables:
+  group_3_varImp = vimp.rfsrc(rf, c("Settlement_pattern", "Political_complexity", "Population_size"),
+                              joint =TRUE)$importance[1]
+  # Group 4: Ecological variables: 2+3+4+5+6
+  group_4_varImp = vimp.rfsrc(rf, names(imputedDataSet[,9:28]), joint = TRUE)$importance[1]
+  group_varImpMatrix[,k] = data.frame(c(group_1_varImp, group_2_varImp, group_3_varImp, group_4_varImp))
+  }
+```
+##### Save the results obtained
+```{r}
+save(ind_varImpMatrix, file = "Individual_variable_importance_matrix_k15.Rda")
+save(group_varImpMatrix, file = "Group_variable_importance_matrix_k15.Rda")
+```
