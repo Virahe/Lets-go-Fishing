@@ -1,0 +1,77 @@
+---
+title: "Biome map k = 15"
+author: "Virginia_Ahedo"
+date: "21/10/2020"
+output: rmarkdown::github_document
+---
+
+#### Setup
+#### Clean workspace
+```{r setup, include=FALSE}
+cat("\f")
+rm(list=ls(all=TRUE))
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Set working paths
+```{r}
+setwd("D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing")
+dataPath <- "D:/OneDrive - Universidad de Burgos/Goonies/CULM/GitHub_repository/Lets-go-Fishing"
+```
+
+#### Load required libraries
+```{r}
+require(varhandle)
+require(jsonlite)
+```
+
+#### Load the results from hierarchical clustering k = 15.
+```{r}
+load("hc_15.Rda")
+str(hc_15)
+```
+
+##### Read coordinates data with jsonlite
+```{r}
+output = jsonlite::fromJSON( "coord_DPLACE.json" )
+#output
+```
+##### Select latitude and longitude
+```{r}
+lat = output$features$properties$language$latitude
+long = output$features$properties$language$longitude
+```
+
+##### Select "society_id"
+```{r}
+society_id = output$features$id
+```
+
+##### Create coord_df
+```{r}
+coord_df = data.frame(cbind(society_id, lat, long))
+colnames(coord_df) = c("society_id", "lat", "long")
+```
+
+##### Left join of coord_df and hc_15
+```{r}
+society_coord_k15 = merge(coord_df, hc_15, by = "society_id")
+society_coord_k15
+```
+
+##### Check the structure of society_coord_k15
+```{r}
+str(society_coord_k15)
+```
+##### Unfactor variables
+```{r}
+society_coord_k15 = unfactor(society_coord_k15)
+str(society_coord_k15)
+```
+#### Save society_coord_k15 dataframe as .Rda and .csv
+```{r}
+save(society_coord_k15, file = "Biome_map_coordinates_k15.Rda")
+write.csv(society_coord_k15, file = "Biome_map_coordinates_k15.csv")
+```
+
+
