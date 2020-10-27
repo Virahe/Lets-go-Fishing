@@ -451,3 +451,163 @@ equal_vector
     ## [71] "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE"
     ## [81] "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE"
     ## [91] "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE"
+
+##### Check groups
+
+``` r
+seq_groups = seq(3, 300, by = 3)
+groups = unfactor(Duncan_df_1_100[,seq_groups])
+```
+
+##### Check if group “a” is always composed by the same algorithms
+
+``` r
+equal_groups = as.character(rep(NA,99))
+for(i in 1:99){
+  target = data.frame(groups[,i+1])
+  colnames(target) <- c("groups")
+  current = data.frame(groups[,i])
+  colnames(current) <- c("groups")
+  equal_groups[i] <- all_equal(target, current)
+}
+
+equal_groups
+```
+
+    ##  [1] "TRUE"                                       
+    ##  [2] "TRUE"                                       
+    ##  [3] "TRUE"                                       
+    ##  [4] "TRUE"                                       
+    ##  [5] "TRUE"                                       
+    ##  [6] "TRUE"                                       
+    ##  [7] "TRUE"                                       
+    ##  [8] "TRUE"                                       
+    ##  [9] "TRUE"                                       
+    ## [10] "TRUE"                                       
+    ## [11] "TRUE"                                       
+    ## [12] "TRUE"                                       
+    ## [13] "TRUE"                                       
+    ## [14] "TRUE"                                       
+    ## [15] "TRUE"                                       
+    ## [16] "TRUE"                                       
+    ## [17] "TRUE"                                       
+    ## [18] "TRUE"                                       
+    ## [19] "TRUE"                                       
+    ## [20] "TRUE"                                       
+    ## [21] "TRUE"                                       
+    ## [22] "TRUE"                                       
+    ## [23] "TRUE"                                       
+    ## [24] "TRUE"                                       
+    ## [25] "TRUE"                                       
+    ## [26] "TRUE"                                       
+    ## [27] "Factor levels not equal for column `groups`"
+    ## [28] "Factor levels not equal for column `groups`"
+    ## [29] "TRUE"                                       
+    ## [30] "TRUE"                                       
+    ## [31] "TRUE"                                       
+    ## [32] "TRUE"                                       
+    ## [33] "TRUE"                                       
+    ## [34] "TRUE"                                       
+    ## [35] "TRUE"                                       
+    ## [36] "TRUE"                                       
+    ## [37] "TRUE"                                       
+    ## [38] "TRUE"                                       
+    ## [39] "TRUE"                                       
+    ## [40] "TRUE"                                       
+    ## [41] "TRUE"                                       
+    ## [42] "TRUE"                                       
+    ## [43] "TRUE"                                       
+    ## [44] "TRUE"                                       
+    ## [45] "TRUE"                                       
+    ## [46] "TRUE"                                       
+    ## [47] "TRUE"                                       
+    ## [48] "TRUE"                                       
+    ## [49] "TRUE"                                       
+    ## [50] "TRUE"                                       
+    ## [51] "TRUE"                                       
+    ## [52] "TRUE"                                       
+    ## [53] "TRUE"                                       
+    ## [54] "TRUE"                                       
+    ## [55] "TRUE"                                       
+    ## [56] "TRUE"                                       
+    ## [57] "TRUE"                                       
+    ## [58] "TRUE"                                       
+    ## [59] "TRUE"                                       
+    ## [60] "TRUE"                                       
+    ## [61] "TRUE"                                       
+    ## [62] "TRUE"                                       
+    ## [63] "TRUE"                                       
+    ## [64] "TRUE"                                       
+    ## [65] "TRUE"                                       
+    ## [66] "TRUE"                                       
+    ## [67] "TRUE"                                       
+    ## [68] "TRUE"                                       
+    ## [69] "TRUE"                                       
+    ## [70] "TRUE"                                       
+    ## [71] "TRUE"                                       
+    ## [72] "TRUE"                                       
+    ## [73] "TRUE"                                       
+    ## [74] "TRUE"                                       
+    ## [75] "TRUE"                                       
+    ## [76] "TRUE"                                       
+    ## [77] "TRUE"                                       
+    ## [78] "TRUE"                                       
+    ## [79] "TRUE"                                       
+    ## [80] "TRUE"                                       
+    ## [81] "TRUE"                                       
+    ## [82] "TRUE"                                       
+    ## [83] "TRUE"                                       
+    ## [84] "TRUE"                                       
+    ## [85] "TRUE"                                       
+    ## [86] "TRUE"                                       
+    ## [87] "TRUE"                                       
+    ## [88] "TRUE"                                       
+    ## [89] "TRUE"                                       
+    ## [90] "TRUE"                                       
+    ## [91] "TRUE"                                       
+    ## [92] "TRUE"                                       
+    ## [93] "TRUE"                                       
+    ## [94] "TRUE"                                       
+    ## [95] "TRUE"                                       
+    ## [96] "TRUE"                                       
+    ## [97] "TRUE"                                       
+    ## [98] "TRUE"                                       
+    ## [99] "TRUE"
+
+##### Explore the different one
+
+``` r
+data.frame(groups[,27])
+```
+
+    ##   groups...27.
+    ## 1            a
+    ## 2            a
+    ## 3            a
+    ## 4            b
+    ## 5            c
+    ## 6            d
+
+``` r
+data.frame(groups[,28])
+```
+
+    ##   groups...28.
+    ## 1            a
+    ## 2           ab
+    ## 3            b
+    ## 4            c
+    ## 5            d
+    ## 6            e
+
+``` r
+Duncan_df_1_100[,82:84]
+```
+
+    ##              X82      X83 X84
+    ## 1   RandomForest 53.25581   a
+    ## 2 RotationForest 52.55814  ab
+    ## 3       SVM_poly 49.68992   b
+    ## 4           OneR 31.55039   c
+    ## 5       AdaBoost 25.27132   d
+    ## 6          ZeroR 19.14729   e

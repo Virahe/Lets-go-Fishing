@@ -203,4 +203,34 @@ for(i in 1:99){
 
 equal_vector
 ```
+##### Check groups
+```{r}
+seq_groups = seq(3, 300, by = 3)
+groups = unfactor(Duncan_df_1_100[,seq_groups])
+```
+
+##### Check if group "a" is always composed by the same algorithms
+```{r}
+equal_groups = as.character(rep(NA,99))
+for(i in 1:99){
+  target = data.frame(groups[,i+1])
+  colnames(target) <- c("groups")
+  current = data.frame(groups[,i])
+  colnames(current) <- c("groups")
+  equal_groups[i] <- all_equal(target, current)
+}
+
+equal_groups
+```
+##### Explore the different one
+```{r}
+data.frame(groups[,27])
+```
+
+```{r}
+data.frame(groups[,28])
+```
+```{r}
+Duncan_df_1_100[,82:84]
+```
 
