@@ -27,16 +27,22 @@ require(tidyverse)
 
     ## Loading required package: tidyverse
 
-    ## -- Attaching packages ---------------------------------------------------------------- tidyverse 1.3.0 --
+    ## -- Attaching packages ------------------------------------------------------------------- tidyverse 1.3.0 --
 
     ## v ggplot2 3.3.0     v purrr   0.3.3
     ## v tibble  2.1.3     v dplyr   0.8.5
     ## v tidyr   1.0.2     v stringr 1.4.0
     ## v readr   1.3.1     v forcats 0.5.0
 
-    ## -- Conflicts ------------------------------------------------------------------- tidyverse_conflicts() --
+    ## -- Conflicts ---------------------------------------------------------------------- tidyverse_conflicts() --
     ## x dplyr::filter() masks stats::filter()
     ## x dplyr::lag()    masks stats::lag()
+
+``` r
+require(varhandle)
+```
+
+    ## Loading required package: varhandle
 
 #### Load results experimenter K = 15, datasets = 1:50
 
@@ -412,3 +418,36 @@ dim(Duncan_df_1_100)
 save(Duncan_df_1_100, file = "Detailed_Duncan_df_1_100.Rda")
 write.csv(Duncan_df_1_100, "Detailed_Duncan_df_1_100.csv")
 ```
+
+##### Explore the details of Duncan\_df\_1\_100
+
+``` r
+seq_alg_names = seq(1, 298, by = 3)
+hundred_alg_names = unfactor(Duncan_df_1_100[,seq_alg_names])
+```
+
+##### Check if group “a” is always composed by the same algorithms
+
+``` r
+equal_vector = as.character(rep(NA,99))
+for(i in 1:99){
+  target = data.frame(hundred_alg_names[1:3,i+1])
+  colnames(target) <- c("alg")
+  current = data.frame(hundred_alg_names[1:3,i])
+  colnames(current) <- c("alg")
+  equal_vector[i] <- all_equal(target, current, ignore_col_order = TRUE)
+}
+
+equal_vector
+```
+
+    ##  [1] "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE"
+    ## [11] "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE"
+    ## [21] "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE"
+    ## [31] "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE"
+    ## [41] "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE"
+    ## [51] "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE"
+    ## [61] "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE"
+    ## [71] "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE"
+    ## [81] "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE"
+    ## [91] "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE" "TRUE"
